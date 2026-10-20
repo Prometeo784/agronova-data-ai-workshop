@@ -1,0 +1,27 @@
+// Medidas del OTD para Power BI. EJEMPLO ILUSTRATIVO: NO se ejecutó en Power BI Desktop.
+// La misma lógica se verifica con pandas y SQL en tests/ (datos sintéticos).
+//
+// Modelo supuesto (CSV de data/exportadas/):
+//   'Lineas OC'   = slv_oc_linea.csv  (columnas IdOC, Linea, IdProveedor, FechaPrometida, FechaRecepcion,
+//                                      Recibida, EsVencida, ATiempo)
+//   'Proveedor'   = dim_proveedor.csv (IdProveedor, Nombre)
+//   Relación: Proveedor[IdProveedor] (uno) -> 'Lineas OC'[IdProveedor] (muchos)
+// Las columnas Recibida, EsVencida y ATiempo (0/1) se calculan en Silver o en Power Query, no en DAX.
+// EsVencida depende de una fecha de corte (en el ejemplo, 2026-10-01); en un informe real, usa un parámetro.
+
+Lineas Vencidas =
+CALCULATE ( COUNTROWS ( 'Lineas OC' ), 'Lineas OC'[EsVencida] = 1 )
+
+Lineas A Tiempo =
+CALCULATE ( COUNTROWS ( 'Lineas OC' ), 'Lineas OC'[ATiempo] = 1 )
+
+Lineas Recibidas Vencidas =
+CALCULATE ( COUNTROWS ( 'Lineas OC' ), 'Lineas OC'[EsVencida] = 1, 'Lineas OC'[Recibida] = 1 )
+
+// Definición correcta: el denominador incluye las líneas vencidas que aún no llegaron.
+OTD % =
+DIVIDE ( [Lineas A Tiempo], [Lineas Vencidas] )
+
+// Definición ingenua (incorrecta): ignora lo que no llegó. Solo para comparar.
+OTD Ingenuo % =
+DIVIDE ( [Lineas A Tiempo], [Lineas Recibidas Vencidas] )
